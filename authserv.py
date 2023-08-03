@@ -142,18 +142,42 @@ if __name__ == "__main__":
     )
     
     with http.server.HTTPServer((args.bind, args.port), handler_class) as httpd:
-        url = "http://"
+        prot = "http://"
         if(args.nossh==False):
             sslcontext = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
             sslcontext.load_cert_chain(keyfile="private.key", certfile="selfsigned.crt")
             httpd.socket = sslcontext.wrap_socket(httpd.socket, server_side=True)
-            url = "https://"
+            prot = "https://"
         from urllib.parse import quote_plus
-        url += args.bind + ":" + str(args.port) + "?t="+quote_plus(_logintoken)
+        url = prot+args.bind + ":" + str(args.port) + "?t="+quote_plus(_logintoken)
+        
         from asciiqr import printqrcode
         printqrcode(url)
         print("Web Server listening at => "+url)
         
+        for i in getlanip.getlanips():
+            url = prot+i + ":" + str(args.port) + "?t="+quote_plus(_logintoken)
+            print(url)
+        for i in getlanip.getlanipsv6():
+            url = prot+"["+i+"]" + ":" + str(args.port) + "?t="+quote_plus(_logintoken)
+            print(url)
+        def th():
+            import time
+            import ssl
+            import urllib.request
+            time.sleep(1)
+            ssl._create_default_https_context = ssl._create_unverified_context
+            for i in getlanip.getlanips():
+                url = prot+i + ":" + str(args.port) + "?t="+quote_plus(_logintoken)
+                try:
+                    res = urllib.request.urlopen(url)
+                    print(url,res.status)
+                except Exception as e:
+                    #print(url,e)
+                    pass
+            pass
+        import threading
+        threading.Thread(target=th).start()
         httpd.serve_forever()
     
         
